@@ -197,12 +197,15 @@ export const login = async (req, res) => {
       { expiresIn: "5d" }
     );
 
-    res.cookie("token", token, {
+    const isProduction = process.env.NODE_ENV === "production";
+    const cookieOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
       maxAge: 5 * 24 * 60 * 60 * 1000, // 5 days to match JWT expiry
-    });
+    };
+
+    res.cookie("token", token, cookieOptions);
 
     return res.json({
       message: "Login successful",
@@ -223,7 +226,12 @@ export const login = async (req, res) => {
 ================================ */
 export const logout = async (req, res) => {
   try {
-    res.clearCookie("token");
+    const isProduction = process.env.NODE_ENV === "production";
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
+    });
     return res.json({
       message: "Logout successful",
       success: true,

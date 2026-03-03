@@ -26,10 +26,22 @@ connectDB();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+const defaultOrigins = ["http://localhost:5173", "http://localhost:5174"];
+const envOrigins = (process.env.CORS_ORIGINS || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+const allowedOrigins = [...new Set([...defaultOrigins, ...envOrigins])];
+
 app.use(cors({
-    origin: ["http://localhost:5173", "http://localhost:5174"],
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        return callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE"]
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
 }));
 
 app.use(cookieParser());
