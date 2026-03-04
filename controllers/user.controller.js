@@ -18,7 +18,9 @@ const isStrongPassword = (password) => {
 ================================ */
 export const singup = async (req, res) => {
   try {
-    const { name, email, password, role, adminCode } = req.body;
+    const name = (req.body.name || "").trim();
+    const email = (req.body.email || "").trim().toLowerCase();
+    const { password, role, adminCode } = req.body;
 
     if (!name || !email || !password || !role) {
       return res.status(400).json({
@@ -92,19 +94,12 @@ export const singup = async (req, res) => {
     } catch (mailError) {
       console.error("OTP Email Error:", mailError);
 
-      // In local/dev, allow flow to continue so OTP page still works.
-      if (process.env.NODE_ENV !== "production") {
-        return res.json({
-          message:
-            "OTP generated, but email delivery failed. Use the OTP from DB/logs in local development.",
-          success: true,
-          otpSent: false,
-        });
-      }
-
-      return res.status(500).json({
-        message: "OTP generated but email delivery failed. Please try again.",
-        success: false,
+      // Never block signup flow because of email provider issues.
+      return res.json({
+        message:
+          "OTP generated, but email delivery failed. Please use resend OTP or contact support.",
+        success: true,
+        otpSent: false,
       });
     }
   } catch (error) {
@@ -121,7 +116,8 @@ export const singup = async (req, res) => {
 ================================ */
 export const verifyOTP = async (req, res) => {
   try {
-    const { email, otp } = req.body;
+    const email = (req.body.email || "").trim().toLowerCase();
+    const otp = String(req.body.otp || "").trim();
 
     if (!email || !otp) {
       return res.status(400).json({
