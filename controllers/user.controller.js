@@ -83,12 +83,30 @@ export const singup = async (req, res) => {
     });
 
     // send OTP email (REAL-TIME)
-    await sendOTPEmail(email, otp);
+    try {
+      await sendOTPEmail(email, otp);
+      return res.json({
+        message: "OTP sent to your email",
+        success: true,
+      });
+    } catch (mailError) {
+      console.error("OTP Email Error:", mailError);
 
-    return res.json({
-      message: "OTP sent to your email",
-      success: true,
-    });
+      // In local/dev, allow flow to continue so OTP page still works.
+      if (process.env.NODE_ENV !== "production") {
+        return res.json({
+          message:
+            "OTP generated, but email delivery failed. Use the OTP from DB/logs in local development.",
+          success: true,
+          otpSent: false,
+        });
+      }
+
+      return res.status(500).json({
+        message: "OTP generated but email delivery failed. Please try again.",
+        success: false,
+      });
+    }
   } catch (error) {
     console.error("Signup Error:", error);
     return res.status(500).json({
