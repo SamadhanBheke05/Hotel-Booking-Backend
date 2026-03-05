@@ -1,51 +1,47 @@
-import nodemailer from "nodemailer";
 import dotenv from "dotenv";
+import transporter, {
+    emailUser,
+    emailPass,
+    mailService,
+    smtpHost,
+    smtpPort,
+    smtpSecure,
+} from "../config/nodemailer.js";
 
 dotenv.config();
 
-const emailUser = process.env.EMAIL_USER || "";
-const emailPass = (process.env.EMAIL_PASS || "").replace(/\s+/g, "");
 const emailFrom = process.env.EMAIL_FROM || emailUser;
-
-if (!emailUser || !emailPass) {
-    console.error("EMAIL_USER or EMAIL_PASS is missing in environment variables");
-}
-
-const smtpHost = process.env.SMTP_HOST || "smtp.gmail.com";
-const smtpPort = Number(process.env.SMTP_PORT || 587);
-const smtpSecure = String(process.env.SMTP_SECURE || "false").toLowerCase() === "true";
-
-const transporter = nodemailer.createTransport({
-    host: smtpHost,
-    port: smtpPort,
-    secure: smtpSecure,
-    requireTLS: !smtpSecure,
-    connectionTimeout: 20000,
-    greetingTimeout: 20000,
-    socketTimeout: 30000,
-    auth: {
-        user: emailUser,
-        pass: emailPass,
-    },
-});
 
 export const verifyEmailTransport = async () => {
     try {
         await transporter.verify();
-        console.log(
-            `EMAIL_OK mode=smtp host=${smtpHost} port=${smtpPort} secure=${smtpSecure} user=${emailUser || "missing"}`
-        );
+        if (smtpHost) {
+            console.log(
+                `EMAIL_OK mode=host host=${smtpHost} port=${smtpPort} secure=${smtpSecure} user=${emailUser || "missing"}`
+            );
+        } else {
+            console.log(
+                `EMAIL_OK mode=service service=${mailService} user=${emailUser || "missing"}`
+            );
+        }
     } catch (error) {
-        console.error(
-            `EMAIL_FAIL mode=smtp host=${smtpHost} port=${smtpPort} secure=${smtpSecure}`,
-            error?.message || error
-        );
+        if (smtpHost) {
+            console.error(
+                `EMAIL_FAIL mode=host host=${smtpHost} port=${smtpPort} secure=${smtpSecure}`,
+                error?.message || error
+            );
+        } else {
+            console.error(
+                `EMAIL_FAIL mode=service service=${mailService}`,
+                error?.message || error
+            );
+        }
     }
 };
 
 const sendEmail = async ({ to, subject, html }) => {
     if (!emailUser || !emailPass) {
-        throw new Error("EMAIL_USER/EMAIL_PASS missing for SMTP email");
+        throw new Error("EMAIL_USER/EMAIL_PASS missing for Nodemailer email");
     }
 
     const info = await transporter.sendMail({
@@ -59,7 +55,7 @@ const sendEmail = async ({ to, subject, html }) => {
     const rejected = Array.isArray(info.rejected) ? info.rejected : [];
     if (!accepted.length || rejected.length) {
         throw new Error(
-            `SMTP mail not delivered. accepted=${accepted.join(",")} rejected=${rejected.join(",")}`
+            `Mail not delivered. accepted=${accepted.join(",")} rejected=${rejected.join(",")}`
         );
     }
 
