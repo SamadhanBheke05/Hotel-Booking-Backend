@@ -37,10 +37,16 @@ const envOrigins = (process.env.CORS_ORIGINS || "")
     .filter(Boolean);
 const normalizeOrigin = (origin) => origin.replace(/\/$/, "");
 const allowedOrigins = [...new Set([...defaultOrigins, ...envOrigins].map(normalizeOrigin))];
+const localDevOriginRegex = /^http:\/\/(localhost|127\.0\.0\.1):\d+$/i;
+const isAllowedOrigin = (origin) => {
+    if (!origin) return true;
+    const normalized = normalizeOrigin(origin);
+    return allowedOrigins.includes(normalized) || localDevOriginRegex.test(normalized);
+};
 
 app.use(cors({
     origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(normalizeOrigin(origin))) {
+        if (isAllowedOrigin(origin)) {
             return callback(null, true);
         }
         return callback(new Error("Not allowed by CORS"));
